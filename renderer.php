@@ -354,6 +354,7 @@ class format_grid_renderer extends format_section_renderer_base {
         $coursecontext = context_course::instance($course->id);
         $editing = $PAGE->user_is_editing();
         $hascapvishidsect = has_capability('moodle/course:viewhiddensections', $coursecontext);
+        $caninsertsections = $editing && has_capability('moodle/course:movesections', $coursecontext);
 
         if ($editing) {
             $streditsummary = get_string('editsummary');
@@ -372,7 +373,7 @@ class format_grid_renderer extends format_section_renderer_base {
         // Start at 1 to skip the summary block or include the summary block if it's in the grid display.
         if ($this->section0attop) {
             $this->section0attop = $this->make_block_topic0($course, $sections[0], $editing, $urlpicedit,
-                    $streditsummary, false);
+                    $streditsummary, false, $caninsertsections);
             // For the purpose of the grid shade box shown array topic 0 is not shown.
             $this->shadeboxshownarray[0] = 1;
         }
@@ -493,13 +494,13 @@ class format_grid_renderer extends format_section_renderer_base {
 
             // Print Section 0 with general activities.
             if (!$this->section0attop) {
-                $this->make_block_topic0($course, $sections[0], $editing, $urlpicedit, $streditsummary, false);
+                $this->make_block_topic0($course, $sections[0], $editing, $urlpicedit, $streditsummary, false, $caninsertsections);
             }
 
             /* Now all the normal modules by topic.
                Everything below uses "section" terminology - each "section" is a topic/module. */
             $this->make_block_topics($course, $sections, $modinfo, $editing, $hascapvishidsect, $streditsummary,
-                $urlpicedit, false);
+                $urlpicedit, false, $caninsertsections);
 
             echo html_writer::end_tag('div');
             echo html_writer::end_tag('div');
@@ -600,7 +601,7 @@ class format_grid_renderer extends format_section_renderer_base {
      * Makes section zero.
      */
     private function make_block_topic0($course, $sectionzero, $editing, $urlpicedit, $streditsummary,
-            $onsectionpage) {
+            $onsectionpage, $caninsertsections = false) {
 
         if ($this->section0attop) {
             echo html_writer::start_tag('ul', array('class' => 'gtopics-0'));
@@ -654,6 +655,9 @@ class format_grid_renderer extends format_section_renderer_base {
         }
         echo html_writer::end_tag('div');
         echo html_writer::end_tag('li');
+        if ($caninsertsections) {
+            echo $this->change_number_sections($course, 1, 1);
+        }
 
         if ($this->section0attop) {
             echo html_writer::end_tag('ul');
@@ -1047,7 +1051,7 @@ class format_grid_renderer extends format_section_renderer_base {
      * Makes the list of sections to show.
      */
     private function make_block_topics($course, $sections, $modinfo, $editing, $hascapvishidsect, $streditsummary,
-            $urlpicedit, $onsectionpage) {
+            $urlpicedit, $onsectionpage, $caninsertsections = false) {
         $coursecontext = context_course::instance($course->id);
         unset($sections[0]);
 
@@ -1126,6 +1130,9 @@ class format_grid_renderer extends format_section_renderer_base {
 
             echo html_writer::end_tag('div');
             echo html_writer::end_tag('li');
+            if ($caninsertsections) {
+                echo $this->change_number_sections($course, $thissection->section + 1, $thissection->section + 1);
+            }
 
             unset($sections[$section]);
         }
@@ -1144,7 +1151,9 @@ class format_grid_renderer extends format_section_renderer_base {
 
             echo $this->end_section_list();
 
-            echo $this->change_number_sections($course, 0);
+            if (!$caninsertsections) {
+                echo $this->change_number_sections($course, 0, 0);
+            }
         } else {
             echo $this->end_section_list();
         }
